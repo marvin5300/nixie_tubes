@@ -68,12 +68,12 @@ void setup() {
 
 void loop() {
 	if (incrementCounter){
-		if (counter < 9){
+		if (counter < 10){
 			counter = counter +1;
 		}else{
 			counter = 0;
 		}
-		shiftOut(dataPin, clockPin, latchPin, (1<<counter));
+		shiftOut(dataPin, clockPin, latchPin, (1<<counter+1));
 		//int16_t output = (1<<(counter+1));
 		//shiftOut(dataPin, clockPin, latchPin, ((output&0xff00)>>8));
 		//shiftOut(dataPin, clockPin, latchPin, (output&0xff));
@@ -115,8 +115,8 @@ ISR(INT0_vect){
 }
 
 // the heart of the program
-void shiftOut(uint8_t myDataPin, uint8_t myClockPin, uint8_t myLatchPin, uint8_t myDataOut) {
-	// This shifts 8 bits out MSB first, 
+void shiftOut(uint8_t myDataPin, uint8_t myClockPin, uint8_t myLatchPin, uint16_t myDataOut) {
+	// This shifts 16 bits out MSB first, 
 	//on the rising edge of the clock,
 	//clock idles low
 
@@ -125,17 +125,17 @@ void shiftOut(uint8_t myDataPin, uint8_t myClockPin, uint8_t myLatchPin, uint8_t
 	digitalWrite(myDataPin, 0);
 	digitalWrite(myClockPin, 0);
 
-	//for each bit in the byte myDataOut�
+	//for each bit in the byte myDataOut
 	//NOTICE THAT WE ARE COUNTING DOWN in our for loop
 	//This means that %00000001 or "1" will go through such
 	//that it will be pin Q0 that lights. 
-	for (int i = 7; i >= 0; i--) {
+	for (int i = 15; i >= 0; i--) {
 		digitalWrite(myClockPin, 0);
 		//if the value passed to myDataOut and a bitmask result 
 		// true then... so if we are at i=6 and our value is
 		// %11010100 it would the code compares it to %01000000 
 		// and proceeds to set pinState to 1.
-		uint8_t mask = (1<<i);
+		uint16_t mask = (1<<i);
 		if ((myDataOut & mask)!=0) {
 			digitalWrite(myDataPin, HIGH);
 		}
