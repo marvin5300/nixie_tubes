@@ -10,7 +10,7 @@
 #include <Arduino.h>
 #include "./event_counter.h"
 //#include "/home/user/Desktop/arduino-1.8.12/hardware/arduino/avr/cores/arduino/Arduino.h"
-const double frequency = 16e6;//3.6864e6;
+const double frequency = 3.6864e6;
 const double time_factor = frequency/16.0;
 const double prescaler0 = 1024.0;
  //Pin connected to ST_CP of 74HC595
