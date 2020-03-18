@@ -14,11 +14,11 @@ const double frequency = 16e6;//3.6864e6;
 const double time_factor = frequency/16.0;
 const double prescaler0 = 1024.0;
  //Pin connected to ST_CP of 74HC595
-uint8_t latchPin = 11;
+uint8_t latchPin = 6;
 //Pin connected to SH_CP of 74HC595
-uint8_t clockPin = 10;
+uint8_t clockPin = 5;
 ////Pin connected to DS of 74HC595
-uint8_t dataPin = 12;
+uint8_t dataPin = 4;
 //Pin connected to power Relais
 uint8_t powerPin = 3;
 bool powerON = false;
