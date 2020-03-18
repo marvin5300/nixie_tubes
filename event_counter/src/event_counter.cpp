@@ -14,16 +14,16 @@ const double frequency = 3.6864e6;
 const double time_factor = frequency/16.0;
 const double prescaler0 = 1024.0;
  //Pin connected to ST_CP of 74HC595
-uint8_t latchPin = 6;
+const uint8_t latchPin = 6;
 //Pin connected to SH_CP of 74HC595
-uint8_t clockPin = 5;
+const uint8_t clockPin = 5;
 ////Pin connected to DS of 74HC595
-uint8_t dataPin = 4;
+const uint8_t dataPin = 4;
 //Pin connected to power Relais
-uint8_t powerPin = 3;
+const uint8_t powerPin = 3;
 bool powerON = false;
 //Pin pullup button check
-uint8_t buttonPin = 15;
+const uint8_t buttonPin = 15;
 uint8_t interruptPin0 = 2;
 uint8_t counter = 0;
 uint8_t ledPin = 13;
@@ -32,6 +32,7 @@ bool ledON = false;
 bool toggle1 = false;
 bool buttonPressed = false;
 //holders for infromation you're going to pass to shifting function
+uint8_t num_nixies = 1;
 
 void setup() {
 	//set pins to output because they are addressed in the main loop
@@ -68,15 +69,22 @@ void setup() {
 
 void loop() {
 	if (incrementCounter){
-		if (counter < 10){
+		if (counter < 9){
 			counter = counter +1;
 		}else{
 			counter = 0;
 		}
-		shiftOut(dataPin, clockPin, latchPin, (1<<counter+1));
-		//int16_t output = (1<<(counter+1));
-		//shiftOut(dataPin, clockPin, latchPin, ((output&0xff00)>>8));
-		//shiftOut(dataPin, clockPin, latchPin, (output&0xff));
+		//shiftOut(dataPin, clockPin, latchPin, static_cast<uint16_t>(1<<2)); // 
+		//shiftOut(dataPin, clockPin, latchPin, static_cast<uint16_t>(1<<3)); // == 1
+		//shiftOut(dataPin, clockPin, latchPin, static_cast<uint16_t>(1<<4)); // == 2
+		// 7 does nothing
+		//shiftOut(dataPin, clockPin, latchPin, static_cast<uint16_t>(1<<8)); // == 5
+		//shiftOut(dataPin, clockPin, latchPin, static_cast<uint16_t>(1<<12)); // == 9
+		// 14 and 15 do nothing
+		//shiftOut(dataPin, clockPin, latchPin, static_cast<uint16_t>(1<<13)); // == 0
+		//shiftOut(dataPin, clockPin, latchPin, static_cast<uint16_t>(1<<14)); //
+		uint8_t shift[] = {counter};
+		shiftout(shift);
 		incrementCounter = false;
 	}
 	
@@ -97,61 +105,74 @@ void loop() {
 
 ISR(TIMER1_COMPA_vect){
 	incrementCounter = true;
-	/*if (toggle1){
+	if (toggle1){
 		digitalWrite(ledPin, HIGH);
 		toggle1 = false;
 	}else{
 		digitalWrite(ledPin, LOW);
 		toggle1 = true;
-	}*/
-}
-
-ISR(INT0_vect){
-	if (digitalRead(interruptPin0)==HIGH){
-		digitalWrite(ledPin,HIGH);
-	}else{
-		digitalWrite(ledPin,LOW);
 	}
 }
 
+ISR(INT0_vect){
+	/*if (digitalRead(interruptPin0)==HIGH){
+		digitalWrite(ledPin,HIGH);
+	}else{
+		digitalWrite(ledPin,LOW);
+	}*/
+}
+
 // the heart of the program
-void shiftOut(uint8_t myDataPin, uint8_t myClockPin, uint8_t myLatchPin, uint16_t myDataOut) {
+void shiftout(uint8_t *myDataOut) {
 	// This shifts 16 bits out MSB first, 
 	//on the rising edge of the clock,
 	//clock idles low
 
 	//clear everything out just in case to
 	//prepare shift register for bit shifting
-	digitalWrite(myDataPin, 0);
-	digitalWrite(myClockPin, 0);
+	digitalWrite(dataPin, 0);
+	digitalWrite(clockPin, 0);
 
+	uint16_t shift[num_nixies];
+	for (uint8_t i = 0; i < num_nixies; i++){
+		if (myDataOut[i] > 0){
+			shift[i] = static_cast<uint16_t>(1<<(myDataOut[i]+2));
+		}else{
+			shift[i] = static_cast<uint16_t>(1<<13);
+		}
+		if (myDataOut[i] > 4){
+			shift[i] = shift[i] << 1;
+		}
+	}
 	//for each bit in the byte myDataOut
 	//NOTICE THAT WE ARE COUNTING DOWN in our for loop
 	//This means that %00000001 or "1" will go through such
 	//that it will be pin Q0 that lights. 
-	for (int i = 15; i >= 0; i--) {
-		digitalWrite(myClockPin, 0);
-		//if the value passed to myDataOut and a bitmask result 
-		// true then... so if we are at i=6 and our value is
-		// %11010100 it would the code compares it to %01000000 
-		// and proceeds to set pinState to 1.
-		uint16_t mask = (1<<i);
-		if ((myDataOut & mask)!=0) {
-			digitalWrite(myDataPin, HIGH);
-		}
-		else {
-			digitalWrite(myDataPin, LOW);
-		}
+	for (int i = 0; i < num_nixies; i++){
+		for (int k = 0; k < 16; k++) {
+			digitalWrite(clockPin, 0);
+			//if the value passed to myDataOut and a bitmask result 
+			// true then... so if we are at i=6 and our value is
+			// %11010100 it would the code compares it to %01000000 
+			// and proceeds to set pinState to 1.
+			uint16_t mask = (1<<k);
+			if (shift[i] == mask) {
+				digitalWrite(dataPin, HIGH);
+			}
+			else {
+				digitalWrite(dataPin, LOW);
+			}
 
-		//Sets the pin to HIGH or LOW depending on pinState
-		//register shifts bits on upstroke of clock pin  
-		digitalWrite(myClockPin, 1);
-		//zero the data pin after shift to prevent bleed through
-		digitalWrite(myDataPin, 0);
+			//Sets the pin to HIGH or LOW depending on pinState
+			//register shifts bits on upstroke of clock pin  
+			digitalWrite(clockPin, 1);
+			//zero the data pin after shift to prevent bleed through
+			digitalWrite(dataPin, 0);
+		}
 	}
 
 	//stop shifting
-	digitalWrite(myClockPin, 0);
-	digitalWrite(myLatchPin, 1);
-	digitalWrite(myLatchPin, 0);
+	digitalWrite(clockPin, 0);
+	digitalWrite(latchPin, 1);
+	digitalWrite(latchPin, 0);
 }
