@@ -32,7 +32,8 @@ bool ledON = false;
 bool toggle1 = false;
 bool buttonPressed = false;
 //holders for infromation you're going to pass to shifting function
-uint8_t num_nixies = 1;
+const uint8_t num_nixies = 2;
+const uint32_t max_number = pow_ten(num_nixies)-1;
 
 void setup() {
 	//set pins to output because they are addressed in the main loop
@@ -69,8 +70,8 @@ void setup() {
 
 void loop() {
 	if (incrementCounter){
-		if (counter < 9){
-			counter = counter +1;
+		if (static_cast<uint32_t>(counter) < max_number){
+			counter++;
 		}else{
 			counter = 0;
 		}
@@ -83,8 +84,7 @@ void loop() {
 		// 14 and 15 do nothing
 		//shiftOut(dataPin, clockPin, latchPin, static_cast<uint16_t>(1<<13)); // == 0
 		//shiftOut(dataPin, clockPin, latchPin, static_cast<uint16_t>(1<<14)); //
-		uint8_t shift[] = {counter};
-		shiftout(shift);
+		shiftout(counter);
 		incrementCounter = false;
 	}
 	
@@ -123,7 +123,7 @@ ISR(INT0_vect){
 }
 
 // the heart of the program
-void shiftout(uint8_t *myDataOut) {
+void shiftout(uint8_t number) {
 	// This shifts 16 bits out MSB first, 
 	//on the rising edge of the clock,
 	//clock idles low
@@ -133,22 +133,21 @@ void shiftout(uint8_t *myDataOut) {
 	digitalWrite(dataPin, 0);
 	digitalWrite(clockPin, 0);
 
-	uint16_t shift[num_nixies];
-	for (uint8_t i = 0; i < num_nixies; i++){
-		if (myDataOut[i] > 0){
-			shift[i] = static_cast<uint16_t>(1<<(myDataOut[i]+2));
-		}else{
-			shift[i] = static_cast<uint16_t>(1<<13);
-		}
-		if (myDataOut[i] > 4){
-			shift[i] = shift[i] << 1;
-		}
-	}
 	//for each bit in the byte myDataOut
 	//NOTICE THAT WE ARE COUNTING DOWN in our for loop
 	//This means that %00000001 or "1" will go through such
-	//that it will be pin Q0 that lights. 
-	for (int i = 0; i < num_nixies; i++){
+	//that it will be pin Q0 that lights.
+	for (int i = num_nixies-1; i >= 0; i--){
+		uint8_t tmp = (number/(pow_ten(i)))%10;
+		uint16_t shift;
+		if (tmp>0){
+			shift = static_cast<uint16_t>(1<<(tmp+2));
+		}else{
+			shift = static_cast<uint16_t>(1<<13);
+		}
+		if (tmp>4){
+			shift <<=1;
+		}
 		for (int k = 0; k < 16; k++) {
 			digitalWrite(clockPin, 0);
 			//if the value passed to myDataOut and a bitmask result 
@@ -156,7 +155,7 @@ void shiftout(uint8_t *myDataOut) {
 			// %11010100 it would the code compares it to %01000000 
 			// and proceeds to set pinState to 1.
 			uint16_t mask = (1<<k);
-			if (shift[i] == mask) {
+			if (shift == mask) {
 				digitalWrite(dataPin, HIGH);
 			}
 			else {
@@ -175,4 +174,12 @@ void shiftout(uint8_t *myDataOut) {
 	digitalWrite(clockPin, 0);
 	digitalWrite(latchPin, 1);
 	digitalWrite(latchPin, 0);
+}
+
+uint32_t pow_ten(uint8_t n){
+	uint32_t val = 1;
+	for (uint8_t i = 0; i < n; i++){
+		val *= 10;
+	}
+	return val;
 }
