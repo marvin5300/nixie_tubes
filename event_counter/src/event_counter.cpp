@@ -50,7 +50,6 @@ void setup() {
 	digitalWrite(latchPin, LOW);
 	digitalWrite(clockPin, LOW);
 	digitalWrite(dataPin, LOW);
-	Serial.begin(9600);
 	//startMillis = millis();
 	// setup timer interrupts
 	cli();
