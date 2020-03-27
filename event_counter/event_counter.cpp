@@ -7,8 +7,9 @@
  * LEDs attached to each of the outputs of the shift register
 
  */
-#include <Arduino.h>
+#include "DCF77.h"
 #include "./event_counter.h"
+#include <Arduino.h>
 //#include "/home/user/Desktop/arduino-1.8.12/hardware/arduino/avr/cores/arduino/Arduino.h"
 const double frequency = 3.6864e6;
 const double time_factor = frequency/16.0;
@@ -43,7 +44,7 @@ void setup() {
 	pinMode(ledPin, OUTPUT);
 	pinMode(powerPin, OUTPUT);
 	pinMode(buttonPin, INPUT_PULLUP);
-	pinMode(interruptPin0, INPUT);
+	pinMode(interruptPin0, INPUT_PULLUP);
 	digitalWrite(powerPin, HIGH);
 	digitalWrite(ledPin, LOW);
 	ledON = false;
@@ -104,21 +105,21 @@ void loop() {
 
 ISR(TIMER1_COMPA_vect){
 	incrementCounter = true;
-	if (toggle1){
+	/*if (toggle1){
 		digitalWrite(ledPin, HIGH);
 		toggle1 = false;
 	}else{
 		digitalWrite(ledPin, LOW);
 		toggle1 = true;
-	}
+	}*/
 }
 
 ISR(INT0_vect){
-	/*if (digitalRead(interruptPin0)==HIGH){
+	if (digitalRead(interruptPin0)==HIGH){
 		digitalWrite(ledPin,HIGH);
 	}else{
 		digitalWrite(ledPin,LOW);
-	}*/
+	}
 }
 
 // the heart of the program
